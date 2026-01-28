@@ -205,3 +205,18 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- Project Specific Configuration ---
+
+# Ignore data content but keep the folder structure
+data/0_raw/*
+data/1_interim/*
+!data/0_raw/.gitkeep
+!data/1_interim/.gitkeep
+
+# Ignore MLOps artifacts and experiments
+mlruns/
+mlartifacts/
+*.pkl
+*.joblib
+confusion_matrix.csv
