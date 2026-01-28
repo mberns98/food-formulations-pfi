@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:15
     container_name: food_pfi_db
+    env_file: .env
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
