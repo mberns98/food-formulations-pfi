@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(BASE_DIR))
 
 import psycopg2
-from src.config import DB_PARAMS, DATA_PROCESSED # Ahora sí existe
+from src.config import DB_PARAMS, DATA_PROCESSED
 
 MAP_OUT = DATA_PROCESSED / "formulas_map.csv"
 
