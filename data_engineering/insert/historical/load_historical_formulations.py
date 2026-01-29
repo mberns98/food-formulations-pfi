@@ -2,7 +2,7 @@ import sys
 import pandas as pd
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parents[2]
+BASE_DIR = Path(__file__).resolve().parents[3] 
 sys.path.append(str(BASE_DIR))
 
 import psycopg2
