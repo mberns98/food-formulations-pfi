@@ -11,6 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 # Dynamic data paths based on project structure
 DATA_RAW = BASE_DIR / "data" / "0_raw"
 DATA_INTERIM = BASE_DIR / "data" / "1_interim"
+DATA_PROCESSED = BASE_DIR / "data" / "2_processed"
 
 # Centralized Database Configuration
 DB_PARAMS = {
