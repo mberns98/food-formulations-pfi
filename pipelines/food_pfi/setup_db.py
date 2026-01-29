@@ -54,6 +54,24 @@ def create_tables():
         );
         """,
         """
+        CREATE TABLE IF NOT EXISTS dim_tiempo (
+            id_tiempo SERIAL PRIMARY KEY,
+            fecha DATE UNIQUE NOT NULL,
+            mes INT,
+            anio INT,
+            dia_semana TEXT
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS dim_dolar (
+            id_dolar SERIAL PRIMARY KEY,
+            fecha DATE UNIQUE NOT NULL,
+            valor_oficial DECIMAL(10, 2),
+            valor_blue DECIMAL(10, 2),
+            fuente TEXT
+        );
+        """,
+        """
         CREATE TABLE IF NOT EXISTS dim_procesos (
             id_proceso SERIAL PRIMARY KEY,
             id_operario INT REFERENCES dim_operarios(id_operario),
@@ -75,18 +93,19 @@ def create_tables():
         # 3. Fact Table
         """
         CREATE TABLE IF NOT EXISTS fact_form (
-            id_fact SERIAL PRIMARY KEY,
-            id_formula INT REFERENCES dim_formulas(id_formula) ON DELETE CASCADE,
+            id_resultado SERIAL PRIMARY KEY,
+            id_formula INT REFERENCES dim_formulas(id_formula),
             id_evaluador INT REFERENCES dim_evaluadores(id_evaluador),
             id_proceso INT REFERENCES dim_procesos(id_proceso),
-            -- id_tiempo e id_dolar si decides crearlas luego
-            aceptabilidad INT CHECK (aceptabilidad BETWEEN 1 AND 4),
-            dureza INT CHECK (dureza BETWEEN 1 AND 4),
-            elasticidad INT CHECK (elasticidad BETWEEN 1 AND 4),
-            color INT CHECK (color BETWEEN 1 AND 4),
-            precio_ars NUMERIC(10,2),
+            id_dolar INT REFERENCES dim_dolar(id_dolar),
+            id_tiempo INT REFERENCES dim_tiempo(id_tiempo),
+            aceptabilidad INT,
+            dureza INT,
+            elasticidad INT,
+            color INT,
+            precio_ars DECIMAL(10, 2),
+            precio_usd DECIMAL(10, 2),
             source TEXT NOT NULL DEFAULT 'historical'
-            CHECK (source IN ('historical', 'operational_ui'))
         );
         """
     ]
