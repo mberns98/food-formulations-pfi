@@ -99,7 +99,6 @@ def create_tables():
         cursor = conn.cursor()
 
         # Check environment variable for cleanup
-        # This is useful for development iterations
         DROP_TABLES_FIRST = os.getenv("DROP_TABLES_FIRST", "false").lower() == "true"
         if DROP_TABLES_FIRST:
             tables_to_drop = [

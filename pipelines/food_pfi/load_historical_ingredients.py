@@ -1,17 +1,13 @@
-print("🚀 Script iniciado...")
-
 import sys
 from pathlib import Path
 
-# 1. Ajuste de rutas para encontrar 'src'
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(BASE_DIR))
 
 import psycopg2
-from src.config import DB_PARAMS  # <--- Usamos tu configuración central
+from src.config import DB_PARAMS
 
 def load_ingredientes():
-    # Tu lista de ingredientes (se mantiene igual)
     ingredientes = [
         ("agua", "GENERICA", "MockSupplier", 9999),
         ("aceite_coco", "GENERICA", "MockSupplier", 9999),
@@ -80,14 +76,11 @@ def load_ingredientes():
 
     conn = None
     try:
-        # 2. Conexión usando los parámetros centrales
         conn = psycopg2.connect(**DB_PARAMS)
         cursor = conn.cursor()
 
-        # 3. Limpieza de tabla (Truncal para evitar duplicados en desarrollo)
         cursor.execute("TRUNCATE TABLE dim_ingredientes RESTART IDENTITY CASCADE;")
 
-        # 4. Carga masiva (Mucho más eficiente que un loop)
         query = """
             INSERT INTO dim_ingredientes (nombre, marca, proveedor, costo_unitario_ars)
             VALUES (%s, %s, %s, %s)
