@@ -213,6 +213,8 @@ data/0_raw/*
 data/1_interim/*
 !data/0_raw/.gitkeep
 !data/1_interim/.gitkeep
+!data/2_processed/.gitkeep
+postgres_storage/
 
 # Ignore MLOps artifacts and experiments
 mlruns/

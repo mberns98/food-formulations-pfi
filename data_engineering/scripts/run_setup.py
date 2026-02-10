@@ -11,10 +11,12 @@ from src.config import DB_PARAMS
 def run_setup():
     """
     Orquestador de arquitectura de datos:
-    1. Crea Schemas (Bronze, Silver, Gold).
-    2. Ejecuta archivos SQL de tablas en orden alfabético.
+    1. Crea/Verifica Schemas (Bronze, model, Gold).
+    2. Asegura la creación de todas las tablas (DDL).
+    3. Limpia registros históricos si se solicita, preservando datos de la UI.
     """
     ddl_path = BASE_DIR / "data_engineering" / "ddl"
+    schemas_path = ddl_path / "0_schemas"
     tables_path = ddl_path / "1_tables"
     
     conn = None
@@ -22,35 +24,66 @@ def run_setup():
         conn = psycopg2.connect(**DB_PARAMS)
         cur = conn.cursor()
 
-        # --- 1. Borrar Schemas Antiguos (opcional) ---
-        DROP_ALL = os.getenv("DROP_SCHEMAS_FIRST", "false").lower() == "true"
-        if DROP_ALL:
-            print("🧹 Borrando schemas antiguos (Clean Slate)...")
-            for schema in ["bronze", "silver", "gold"]:
-                cur.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE;")
+        print("📁 Creando esquemas 'model' y 'analytics'...")
+        for schema_file in sorted(os.listdir(schemas_path)):
+            if schema_file.endswith(".sql"):
+                file_path = schemas_path / schema_file
+                
+                # Leemos el contenido del archivo .sql
+                with open(file_path, "r", encoding="utf-8") as f:
+                    sql_script = f.read()
+                
+                # Ejecutamos el script leído
+                print(f"  > Ejecutando: {schema_file}")
+                cur.execute(sql_script)
+        
+        conn.commit()
 
-        # --- 2. Crear Schemas ---
-        print("📁 Creando estructuras Bronze, Silver y Gold...")
-        for schema in ["bronze", "silver", "gold"]:
-            cur.execute(f"CREATE SCHEMA IF NOT EXISTS {schema};")
-
-        # --- 3. Ejecutar Tablas ---
-        # Usamos sorted() para que 01_ se ejecute antes que 02_
         sql_files = sorted(tables_path.glob("*.sql"))
         
         if not sql_files:
             print("⚠️ No se encontraron archivos .sql en ddl/1_tables/")
         
         for file_path in sql_files:
-            print(f"📖 Ejecutando: {file_path.name}")
+            print(f"📖 Asegurando estructura: {file_path.name}")
             with open(file_path, "r", encoding="utf-8") as f:
                 cur.execute(f.read())
-
+        
         conn.commit()
-        print("🚀 ¡Arquitectura de datos desplegada con éxito!")
+
+        CLEAN_HISTORICAL = os.getenv("DROP_HISTORICAL_DATA_FIRST", "false").lower() == "true"
+        
+        if CLEAN_HISTORICAL:
+            print("🧹 Limpiando registros 'historical' (Orden Jerárquico)...")
+            
+            tables_to_clean = [
+                "fact_form", 
+                "bridge_formula_ing", 
+                "dim_procesos", 
+                "dim_formulaciones",
+                "dim_operarios",
+                "dim_ingredientes",
+                "dim_evaluadores",
+                "dim_dolar",
+                "dim_tiempo"
+            ]
+            
+            for table_name in tables_to_clean:
+                try:
+                    cur.execute(f"SAVEPOINT sp_{table_name};")
+                    cur.execute(f"DELETE FROM model.{table_name} WHERE source = 'historical';")
+                    cur.execute(f"RELEASE SAVEPOINT sp_{table_name};")
+                except psycopg2.Error as e:
+                    cur.execute(f"ROLLBACK TO SAVEPOINT sp_{table_name};")
+                    continue
+            
+            conn.commit() 
+            print("✅ Limpieza histórica completada.")
+
+        print("🚀 ¡Arquitectura de datos lista y sincronizada!")
 
     except Exception as e:
-        print(f"❌ Error durante el setup: {e}")
+        print(f"❌ Error crítico durante el setup: {e}")
         if conn: conn.rollback()
     finally:
         if conn: conn.close()

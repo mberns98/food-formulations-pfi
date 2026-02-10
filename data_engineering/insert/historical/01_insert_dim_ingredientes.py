@@ -79,13 +79,15 @@ def load_ingredientes():
         conn = psycopg2.connect(**DB_PARAMS)
         cursor = conn.cursor()
 
-        cursor.execute("TRUNCATE TABLE dim_ingredientes RESTART IDENTITY CASCADE;")
-
+        print("🧹 Limpiando carga histórica previa...")
+        cursor.execute("DELETE FROM model.dim_ingredientes WHERE source = 'historical';")
         query = """
-            INSERT INTO dim_ingredientes (nombre, marca, proveedor, costo_unitario_ars)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO model.dim_ingredientes (nombre, marca, proveedor, costo_unitario_ars, source)
+            VALUES (%s, %s, %s, %s, %s)
         """
-        cursor.executemany(query, ingredientes)
+        ingredientes_with_source = [(*ing, 'historical') for ing in ingredientes]
+
+        cursor.executemany(query, ingredientes_with_source)
 
         conn.commit()
         print(f"✅ {len(ingredientes)} ingredientes cargados correctamente.")

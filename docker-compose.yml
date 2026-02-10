@@ -11,12 +11,10 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      #  BINDATA storage for Postgres --> Avoid data loss in case container is accidentally removed by a compose down command.
+      - ./postgres_storage:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
-
-volumes:
-  postgres_data:

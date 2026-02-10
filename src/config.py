@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# BASE_DIR points to the project root (one level up from src/)
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 # Load environment variables from .env file
@@ -21,6 +20,5 @@ DB_PARAMS = {
     "host": os.getenv("POSTGRES_HOST", "localhost"),
     "port": int(os.getenv("POSTGRES_PORT", 5432)),
 }
-
-# MLflow Tracking Configuration
+# MLflow Tracking URI
 MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
