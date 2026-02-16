@@ -13,8 +13,8 @@ def create_dynamic_ml_view():
         conn = psycopg2.connect(**DB_PARAMS)
         cur = conn.cursor()
         
-        cur.execute("SELECT nombre FROM model.dim_ingredientes ORDER BY id_ingrediente;")
-        ingredientes = [row[0] for row in cur.fetchall()]
+        cur.execute("SELECT DISTINCT nombre FROM model.dim_ingredientes ORDER BY nombre;")
+        ingredientes = [r[0] for r in cur.fetchall()]
 
         ingredientes_case = [
             f"MAX(CASE WHEN i.nombre = '{n}' THEN b.proporcion ELSE 0 END) AS \"{n}\""
@@ -41,6 +41,7 @@ def create_dynamic_ml_view():
         """
 
         print("🪄 Generando vista 'use_cases.v_ml_training_set' en la base de datos...")
+        cur.execute("DROP VIEW IF EXISTS use_cases.v_ml_training_set CASCADE;")
         cur.execute(view_query)
         conn.commit()
         print("✅ Vista creada exitosamente con todos los ingredientes como columnas.")

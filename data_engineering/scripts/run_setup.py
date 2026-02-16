@@ -54,31 +54,29 @@ def run_setup():
         CLEAN_HISTORICAL = os.getenv("DROP_HISTORICAL_DATA_FIRST", "false").lower() == "true"
         
         if CLEAN_HISTORICAL:
-            print("🧹 Limpiando registros 'historical' (Orden Jerárquico)...")
+            print("🧹 Limpiando registros (Vaciado total de hechos y limpieza selectiva de dimensiones)...")
             
-            tables_to_clean = [
-                "fact_form", 
-                "bridge_formula_ing", 
-                "dim_procesos", 
-                "dim_formulaciones",
-                "dim_operarios",
-                "dim_ingredientes",
-                "dim_evaluadores",
-                "dim_dolar",
-                "dim_tiempo"
+            # 1. TABLAS DE HECHO Y PUENTES (Vaciado Total)
+            total_clean = ["fact_form", "bridge_formula_ing", "dim_operarios"]
+            
+            # 2. DIMENSIONES 
+            selective_clean = [
+                "dim_formulaciones", "dim_ingredientes",
+                "dim_evaluadores", "dim_dolar", "dim_tiempo", "dim_procesos"
             ]
             
-            for table_name in tables_to_clean:
-                try:
-                    cur.execute(f"SAVEPOINT sp_{table_name};")
-                    cur.execute(f"DELETE FROM model.{table_name} WHERE source = 'historical';")
-                    cur.execute(f"RELEASE SAVEPOINT sp_{table_name};")
-                except psycopg2.Error as e:
-                    cur.execute(f"ROLLBACK TO SAVEPOINT sp_{table_name};")
-                    continue
+            # Ejecutamos vaciado total primero
+            for table in total_clean:
+                print(f"  > Vaciando completamente: {table}")
+                cur.execute(f"TRUNCATE model.{table} RESTART IDENTITY CASCADE;")
+
+            # Ejecutamos limpieza selectiva después
+            for table in selective_clean:
+                print(f"  > Limpiando registros historical en: {table}")
+                cur.execute(f"DELETE FROM model.{table} WHERE source = 'historical';")
             
             conn.commit() 
-            print("✅ Limpieza histórica completada.")
+            print("✅ Limpieza completada.")
 
         print("🚀 ¡Arquitectura de datos lista y sincronizada!")
 

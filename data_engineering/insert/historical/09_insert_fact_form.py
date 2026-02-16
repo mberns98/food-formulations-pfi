@@ -12,24 +12,25 @@ RAW_DATA_CSV = DATA_RAW / "formulations_pfi.csv"
 FORMULA_MAP_CSV = DATA_PROCESSED / "formulas_map.csv"
 
 def get_latest_ids(cur):
+    """Obtiene los IDs reales y el valor del dólar."""
     cur.execute("SET search_path TO model, public;")
-    """Obtiene los IDs reales y valida que las tablas no estén vacías."""
-    queries = {
-        "id_dolar": "SELECT id_dolar FROM dim_dolar ORDER BY id_dolar DESC LIMIT 1;",
-        "id_tiempo": "SELECT id_tiempo FROM dim_tiempo ORDER BY id_tiempo DESC LIMIT 1;",
-        "id_eval": "SELECT id_evaluador FROM dim_evaluadores LIMIT 1;",
-        "id_proc": "SELECT id_proceso FROM dim_procesos LIMIT 1;"
-    }
     
-    results = {}
-    for key, query in queries.items():
-        cur.execute(query)
-        res = cur.fetchone()
-        if res is None:
-            raise Exception(f"La tabla asociada a '{key}' está vacía. Revisá los scripts previos (04-07).")
-        results[key] = res[0]
-        
-    return results["id_dolar"], results["id_tiempo"], results["id_eval"], results["id_proc"]
+    cur.execute("SELECT id_dolar, valor_oficial FROM dim_dolar ORDER BY fecha DESC LIMIT 1;")
+    dolar_res = cur.fetchone()
+    
+    cur.execute("SELECT id_tiempo FROM dim_tiempo ORDER BY fecha DESC LIMIT 1;")
+    tiempo_res = cur.fetchone()
+    
+    cur.execute("SELECT id_evaluador FROM dim_evaluadores LIMIT 1;")
+    eval_res = cur.fetchone()
+    
+    cur.execute("SELECT id_proceso FROM dim_procesos LIMIT 1;")
+    proc_res = cur.fetchone()
+
+    if not all([dolar_res, tiempo_res, eval_res, proc_res]):
+        raise Exception("Faltan datos en las dimensiones básicas. Revisá los scripts 01-07.")
+
+    return dolar_res[0], dolar_res[1], tiempo_res[0], eval_res[0], proc_res[0]
 
 def load_historical_fact():
     if not FORMULA_MAP_CSV.exists():
@@ -46,10 +47,9 @@ def load_historical_fact():
         cur = conn.cursor()
         cur.execute("SET search_path TO model, public;")
         
-        # Obtener IDs con validación
-        id_dolar, id_tiempo, id_eval, id_proc = get_latest_ids(cur)
+        id_dolar, valor_dolar, id_tiempo, id_eval, id_proc = get_latest_ids(cur)
 
-        print("🚀 Cargando Fact Table con datos históricos...")
+        print(f"🚀 Cargando Fact Table (Dólar ref: ${valor_dolar})...")
         cur.execute("DELETE FROM fact_form WHERE source = 'historical';")
         
         for idx, row in df.iterrows():
@@ -66,18 +66,28 @@ def load_historical_fact():
                     aceptabilidad, dureza, elasticidad, color,
                     precio_ars, precio_usd, source
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'historical');
+                SELECT 
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    COALESCE(SUM(b.proporcion * i.costo_unitario_ars), 0), -- Costo ARS
+                    COALESCE(SUM(b.proporcion * i.costo_unitario_ars) / NULLIF(%s, 0), 0), -- Costo USD
+                    'historical'
+                FROM bridge_formula_ing b
+                JOIN dim_ingredientes i ON b.id_ingrediente = i.id_ingrediente
+                WHERE b.id_formula = %s
+                GROUP BY b.id_formula;
                 """,
                 (
                     id_formula, id_eval, id_proc, id_dolar, id_tiempo,
                     int(row.aceptabilidad), int(row.dureza), 
                     int(row.elasticidad), int(row.color),
-                    100.0, 0.0
+                    valor_dolar, 
+                    id_formula
                 )
             )
         
         conn.commit()
-        print(f"✅ Fact Table cargada con {len(df)} registros vinculados.")
+        print(f"✅ Fact Table cargada con registros históricos calculados.")
 
     except Exception as e:
         if conn: conn.rollback()

@@ -34,7 +34,7 @@ def insert_operarios():
         if conn:
             conn.rollback()
         print(f"❌ Error en operarios: {e}")
-        sys.exit(1) # Avisamos al orquestador del fallo
+        sys.exit(1) 
     finally:
         if conn:
             conn.close()
