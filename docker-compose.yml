@@ -18,3 +18,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.15.1
+    container_name: mlflow_server
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow.db
+      --default-artifact-root /mlartifacts
+      --host 0.0.0.0
+    ports: ["5000:5000"]
+    volumes:
+      - ./mlartifacts:/mlartifacts
+    restart: unless-stopped
