@@ -363,10 +363,60 @@ if app_mode == "Cargar nueva formulación":
 
 elif app_mode == "Evaluar nueva formulación":
     st.title("🤖 Predicción de Calidad")
-    # ...
-
-elif app_mode == "Evaluar nueva formulación":
-    st.title("🤖 Simulador de Predicción (ML)")
+    st.markdown("Ingresá las proporciones de ingredientes para predecir los atributos sensoriales.")
     st.markdown("---")
-    
-    st.write("Selecciona una fórmula existente o crea una teórica para predecir su aceptabilidad.")
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT nombre FROM model.dim_ingredientes ORDER BY nombre;")
+        all_ingredients = [r[0] for r in cur.fetchall()]
+
+    selected = st.multiselect("Seleccioná los ingredientes de la fórmula:", all_ingredients)
+
+    ingredient_props = {}
+    if selected:
+        cols_per_row = 4
+        for i in range(0, len(selected), cols_per_row):
+            row_cols = st.columns(cols_per_row)
+            for j, ing in enumerate(selected[i:i + cols_per_row]):
+                with row_cols[j]:
+                    ingredient_props[ing] = st.number_input(
+                        ing, min_value=0.0, max_value=1.0, value=0.0,
+                        format="%.4f", key=f"prop_{ing}"
+                    )
+
+        total = sum(ingredient_props.values())
+        if abs(total - 1.0) > 0.0001:
+            st.warning(f"Suma de proporciones: {total:.4f}. Debe ser 1.0000.")
+        else:
+            st.success("Proporciones balanceadas.")
+
+    st.markdown("---")
+
+    if st.button("Predecir Calidad", type="primary", use_container_width=True):
+        if not selected:
+            st.error("Seleccioná al menos un ingrediente.")
+        else:
+            try:
+                from serve.predictor import predict
+                with st.spinner("Consultando modelos..."):
+                    results = predict(ingredient_props)
+
+                st.markdown("### Resultados de Predicción")
+
+                labels = {
+                    "aceptabilidad": "Aceptabilidad",
+                    "dureza": "Dureza",
+                    "elasticidad": "Elasticidad",
+                    "color": "Color",
+                }
+                result_cols = st.columns(4)
+                for i, (target, label) in enumerate(labels.items()):
+                    r = results[target]
+                    pred = r["prediction"]
+                    prob = r["probability"]
+                    quality = "Bueno" if pred == 1 else "Malo"
+                    delta = f"{prob * 100:.1f}% confianza"
+                    with result_cols[i]:
+                        st.metric(label=label, value=quality, delta=delta)
+            except Exception as e:
+                st.error(f"Error al predecir: {e}")
