@@ -9,7 +9,7 @@ sys.path.append(str(BASE_DIR))
 
 from src.config import DB_PARAMS, DATA_RAW, DATA_PROCESSED
 
-CSV_PATH = DATA_RAW / "formulations_pfi.csv"
+CSV_PATH = DATA_RAW / "Formulas_nuevo.csv"
 FORMULA_MAP_CSV = DATA_PROCESSED / "formulas_map.csv"
 
 def insert_bridge_data():
@@ -17,7 +17,8 @@ def insert_bridge_data():
         print(f"❌ No existe el mapa: {FORMULA_MAP_CSV}")
         sys.exit(1)
 
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(CSV_PATH, sep=';', decimal=',')
+    df.columns = df.columns.str.strip().str.lower()
     cols_output = ["aceptabilidad", "dureza", "elasticidad", "color"]
     df_ingredientes = df.drop(columns=cols_output)
 

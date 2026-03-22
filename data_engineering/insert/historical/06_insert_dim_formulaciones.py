@@ -10,12 +10,13 @@ sys.path.append(str(BASE_DIR))
 
 from src.config import DB_PARAMS, DATA_PROCESSED
 
-RAW_DATA_PATH = BASE_DIR / "data" / "0_raw" / "formulations_pfi.csv"
+RAW_DATA_PATH = BASE_DIR / "data" / "0_raw" / "Formulas_nuevo.csv"
 MAP_OUT = DATA_PROCESSED / "formulas_map.csv"
 
 def load_historical_formulations():
-    df_raw = pd.read_csv(RAW_DATA_PATH)
-    
+    df_raw = pd.read_csv(RAW_DATA_PATH, sep=';', decimal=',')
+    df_raw.columns = df_raw.columns.str.strip().str.lower()
+
     meta_columns = ['aceptabilidad', 'dureza', 'elasticidad', 'color']
     ingredient_columns = [c for c in df_raw.columns if c not in meta_columns]
 

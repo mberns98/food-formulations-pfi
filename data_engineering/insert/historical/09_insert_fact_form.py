@@ -8,7 +8,7 @@ sys.path.append(str(BASE_DIR))
 
 from src.config import DB_PARAMS, DATA_RAW, DATA_PROCESSED
 
-RAW_DATA_CSV = DATA_RAW / "formulations_pfi.csv"
+RAW_DATA_CSV = DATA_RAW / "Formulas_nuevo.csv"
 FORMULA_MAP_CSV = DATA_PROCESSED / "formulas_map.csv"
 
 def get_latest_ids(cur):
@@ -39,7 +39,8 @@ def load_historical_fact():
 
     fmap = pd.read_csv(FORMULA_MAP_CSV)
     nombre_to_id = dict(zip(fmap["nombre"], fmap["id_formula"]))
-    df = pd.read_csv(RAW_DATA_CSV)
+    df = pd.read_csv(RAW_DATA_CSV, sep=';', decimal=',')
+    df.columns = df.columns.str.strip().str.lower()
     
     conn = None
     try:

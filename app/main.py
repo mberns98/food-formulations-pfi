@@ -337,7 +337,7 @@ if app_mode == "Cargar nueva formulación":
                 "proceso": tipo_proceso,
                 "temp": temp_proceso,
                 "tiempo": tiempo_proceso,
-                "evaluador": evaluador_f if evaluador_seleccionado != "➕ Agregar nuevo evaluador..." else nuevo_evaluador,
+                "evaluador": evaluador_seleccionado if evaluador_seleccionado != "➕ Agregar nuevo evaluador..." else nuevo_evaluador,
                 "es_nuevo_evaluador": (evaluador_seleccionado == "➕ Agregar nuevo evaluador..."),
                 "acep": aceptabilidad,
                 "col": color_eval,
