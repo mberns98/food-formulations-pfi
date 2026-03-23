@@ -1,28 +1,30 @@
 import psycopg2
+from psycopg2 import sql
 import json
 from datetime import date
 
 def refresh_ml_training_view(cur):
     """
-    Función auxiliar para regenerar la vista de ML cada vez que 
-    se inserta un ingrediente nuevo o una nueva fórmula.
+    Regenerates the ML training view dynamically, with one column per ingredient.
+    Uses psycopg2.sql to safely compose identifiers and literals, preventing SQL injection.
     """
-    # 1. Obtener todos los ingredientes actuales para las columnas
     cur.execute("SELECT DISTINCT nombre FROM model.dim_ingredientes ORDER BY nombre;")
     ingredientes = [r[0] for r in cur.fetchall()]
 
-    ingredientes_case = [
-        f"MAX(CASE WHEN i.nombre = '{n}' THEN b.proporcion ELSE 0 END) AS \"{n}\""
+    case_parts = [
+        sql.SQL("MAX(CASE WHEN i.nombre = {} THEN b.proporcion ELSE 0 END) AS {}").format(
+            sql.Literal(n),
+            sql.Identifier(n)
+        )
         for n in ingredientes
     ]
 
-    # 2. Re-crear la vista dinámica
-    view_query = f"""
+    view_query = sql.SQL("""
     CREATE OR REPLACE VIEW use_cases.v_ml_training_set AS
-    SELECT 
+    SELECT
         f.id_formula,
         f.nombre AS formula_nombre,
-        {", ".join(ingredientes_case)},
+        {cases},
         ff.aceptabilidad,
         ff.dureza,
         ff.elasticidad,
@@ -32,8 +34,9 @@ def refresh_ml_training_view(cur):
     LEFT JOIN model.dim_ingredientes i ON b.id_ingrediente = i.id_ingrediente
     INNER JOIN model.fact_form ff ON f.id_formula = ff.id_formula
     GROUP BY f.id_formula, f.nombre, ff.aceptabilidad, ff.dureza, ff.elasticidad, ff.color
-    ORDER BY f.id_formula;
-    """
+    ORDER BY f.id_formula
+    """).format(cases=sql.SQL(", ").join(case_parts))
+
     cur.execute("DROP VIEW IF EXISTS use_cases.v_ml_training_set CASCADE;")
     cur.execute(view_query)
 
@@ -51,12 +54,17 @@ def save_full_formulation(conn, data):
             id_tiempo = cur.fetchone()[0]
 
             # --- 2. dim_dolar ---
+            # Use the most recent known exchange rate rather than a hardcoded value.
+            cur.execute("SELECT valor_oficial FROM model.dim_dolar ORDER BY fecha DESC LIMIT 1;")
+            row = cur.fetchone()
+            ultimo_valor_oficial = float(row[0]) if row else 0.0
+
             cur.execute("""
                 INSERT INTO model.dim_dolar (fecha, valor_oficial, source)
                 VALUES (%s, %s, 'operational_ui')
                 ON CONFLICT (fecha) DO UPDATE SET fecha = EXCLUDED.fecha
                 RETURNING id_dolar;
-            """, (today, 1000.0)) 
+            """, (today, ultimo_valor_oficial))
             id_dolar = cur.fetchone()[0]
 
             # --- 3. dim_operarios ---
