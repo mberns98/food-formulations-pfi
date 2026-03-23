@@ -123,6 +123,8 @@ poetry run python data_engineering/scripts/run_setup.py
 poetry run python data_engineering/scripts/run_all_historical.py
 ```
 
+> **Exchange rates:** the historical pipeline automatically fetches live USD/ARS rates (oficial + blue) from [dolarapi.com](https://dolarapi.com) — no API key required. If the API is unreachable, it falls back to the most recent rate stored in the database.
+
 ### 6. Train models
 
 ```bash

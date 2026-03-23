@@ -94,7 +94,21 @@ MLflow is used to log all 16 training runs with parameters, metrics, and model a
 
 ---
 
-## 7. Serving Layer — FastAPI + Streamlit
+## 7. Exchange Rate Integration — dolarapi.com
+
+### Decision
+The `dim_dolar` dimension is populated via a live API call to [dolarapi.com](https://dolarapi.com) rather than hardcoded values.
+
+### Justification
+- **Domain relevance**: ingredient costs in Argentina are denominated in ARS but benchmarked against USD. The spread between the official and blue market rates is economically significant and changes daily, making a static value misleading.
+- **No authentication required**: `dolarapi.com` is a free, public API with no API key needed, making it reproducible by any evaluator without setup.
+- **Both rates captured**: the script stores `valor_oficial` (sell price, official rate) and `valor_blue` (sell price, informal/blue market rate), allowing cost calculations to reflect either scenario.
+- **Graceful fallback**: if the API is unreachable (no internet, service down), the script queries the most recent rate already stored in `dim_dolar` and uses it as a fallback. The `fuente` column records whether the value came from `"dolarapi.com"` or `"Fallback-DB"`, preserving data lineage.
+- **Idempotent**: uses `ON CONFLICT (fecha) DO UPDATE`, so running the script multiple times on the same day simply refreshes the value rather than creating duplicate rows.
+
+---
+
+## 8. Serving Layer — FastAPI + Streamlit
 
 ### Decision
 Two separate interfaces: a REST API (FastAPI) and a web UI (Streamlit).
